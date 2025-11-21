@@ -52,8 +52,28 @@ class PublisherHandler(tornado.web.RequestHandler):
             self.write({"error": "Richiesta incompleta"})
 
 
-    def put(self):
-        pass
+    async def put(self, id_publisher):
+        if id_publisher:
+            data = tornado.escape.json_decode(self.request.body)
+            if data.get("name") and data.get("country") and data.get(
+                    "founded_year"):  # .get perché nel caso non ci fosse la chiave restituisce None e non da errore
+                try:
+                    data["founded_year"] = int(data["founded_year"])
+                except TypeError:
+                    self.set_status(400)
+                    self.write({"error": "Richiesta errata"})
+                    return
+                await publishers.update_one({"_id":ObjectId(id_publisher)},{"$set":{"name": data["name"], "founded_year": data["founded_year"], "country": data["country"]}})
+                self.set_status(201)
+                self.write(data)
+            else:
+                self.set_status(400)
+                self.write({"error": "Richiesta incompleta"})
+        else:
+            self.set_status(400)
+            self.write({"error": "Richiesta incompleta"})
+
+
     def delete(self):
         pass
 
