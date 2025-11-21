@@ -191,8 +191,17 @@ class BookHandler(tornado.web.RequestHandler):
             self.write({"error": "Richiesta incompleta"})
 
 
-    def delete(self, id_publisher, id_book):
-        pass
+    async def delete(self, id_publisher=None, id_book=None):
+        if id_publisher:
+            if id_book:
+                await books.delete_one({"_id": ObjectId(id_book)})
+                # print(ris.deleted_count)
+            else:
+                self.set_status(400)
+                self.write({"error": "Richiesta incompleta"})
+        else:
+            self.set_status(400)
+            self.write({"error": "Richiesta incompleta"})
 
 
 def make_app():
