@@ -157,8 +157,7 @@ class BookHandler(tornado.web.RequestHandler):
                     self.set_status(400)
                     self.write({"error": "Richiesta errata"})
                     return
-                await books.insert_one(
-                    {"title": data["title"], "author": data["author"], "genre": data["genre"], "year": data["year"], "publisher_id": ObjectId(id_publisher)})
+                await books.insert_one({"title": data["title"], "author": data["author"], "genre": data["genre"], "year": data["year"], "publisher_id": ObjectId(id_publisher)})
                 self.set_status(201)
                 self.write(data)
                 return
@@ -167,8 +166,29 @@ class BookHandler(tornado.web.RequestHandler):
             self.write({"error": "Richiesta incompleta"})
 
 
-    def put(self, id_publisher, id_book):
-        pass
+    async def put(self, id_publisher=None, id_book=None):
+        if id_publisher:
+            if id_book:
+                data = tornado.escape.json_decode(self.request.body)
+                if data.get("title") and data.get("author") and data.get("genre") and data.get("year"): # .get perché nel caso non ci fosse la chiave restituisce None e non da errore
+                    try:
+                        data["year"] = int(data["year"])
+                    except TypeError:
+                        self.set_status(400)
+                        self.write({"error": "Richiesta errata"})
+                        return
+                    await publishers.update_one({"_id":ObjectId(id_book)},{"$set":{"title": data["title"], "author": data["author"], "genre": data["genre"], "year": data["year"], "publisher_id": ObjectId(id_publisher)}})
+                    self.set_status(201)
+                    self.write(data)
+                else:
+                    self.set_status(400)
+                    self.write({"error": "Richiesta incompleta"})
+            else:
+                self.set_status(400)
+                self.write({"error": "Richiesta incompleta"})
+        else:
+            self.set_status(400)
+            self.write({"error": "Richiesta incompleta"})
 
 
     def delete(self, id_publisher, id_book):
