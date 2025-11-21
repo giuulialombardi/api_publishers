@@ -25,7 +25,7 @@ class PublisherHandler(tornado.web.RequestHandler):
             elif country and not name:
                 cursore = publishers.find({"country": country})
             elif country and name:
-                cursore = (publishers.find({"name": name},{"country":country}))
+                cursore = publishers.find({"name": name},{"country":country})
             else:
                 ris_list=publishers
             if cursore:
@@ -84,13 +84,73 @@ class PublisherHandler(tornado.web.RequestHandler):
 
 
 class BookHandler(tornado.web.RequestHandler):
-    def get(self):
+    async def get(self, id_publisher, id_book=None):
+        ris_list=[]
+        title = self.get_query_argument("title", default=None)
+        author = self.get_query_argument("author", default=None)
+        genre = self.get_query_argument("genre", default=None)
+        if id_publisher:
+            if id_book:
+                book = await books.find_one({"_id": ObjectId(id_book), "publisher_id": ObjectId(id_publisher)})
+                if book:
+                    self.set_status(200)
+                    self.write(str(book))
+                    return
+                else:
+                    self.set_status(404)
+                    self.write({"error": "Libro non trovato"})
+                    return
+            if title:
+                book = await books.find_one({ "title": title, "publisher_id": ObjectId(id_publisher)})
+                if book:
+                    self.set_status(200)
+                    self.write(str(book))
+                    return
+                else:
+                    self.set_status(404)
+                    self.write({"error": "Libro non trovato"})
+                    return
+            if author and not genre:
+                book_cursor = books.find({"author": author, "publisher_id": ObjectId(id_publisher)})
+                if book_cursor:
+                    async for book in book_cursor:
+                        ris_list.append(book)
+                else:
+                    self.set_status(404)
+                    self.write({"error": "Autore non trovato"})
+            if genre and not author:
+                book_cursor = books.find({"genre": genre, "publisher_id": ObjectId(id_publisher)})
+                if book_cursor:
+                    async for book in book_cursor:
+                        ris_list.append(book)
+                else:
+                    self.set_status(404)
+                    self.write({"error": "Genere non trovato"})
+            if genre and author:
+                book_cursor = books.find({"genre": genre,"author":author, "publisher_id": ObjectId(id_publisher)})
+                if book_cursor:
+                    async for book in book_cursor:
+                        ris_list.append(book)
+                else:
+                    self.set_status(404)
+                    self.write({"error": "Genere non trovato"})
+            if len(ris_list)>0:
+                self.set_status(200)
+                self.write(str(ris_list))
+        else:
+            self.set_status(400)
+            self.write({"error": "Richiesta incompleta"})
+
+
+    def post(self, id_publisher):
+
+
+
+    def put(self, id_publisher, id_book):
         pass
-    def post(self):
-        pass
-    def put(self):
-        pass
-    def delete(self):
+
+
+    def delete(self, id_publisher, id_book):
         pass
 
 
