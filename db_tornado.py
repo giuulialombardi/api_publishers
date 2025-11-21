@@ -10,6 +10,7 @@ async def diz_id_publishers(pubs):
         pub_names_ids[pub["name"]] = str(pub["_id"])
 
 class PublisherHandler(tornado.web.RequestHandler):
+
     async def get(self, id_publisher=None):
         ris_list=[]
         name=self.get_query_argument("name", default=None)
@@ -33,8 +34,24 @@ class PublisherHandler(tornado.web.RequestHandler):
             self.set_status(200)
             self.write(str(ris_list))
 
-    def post(self):
-        pass
+
+    async def post(self):
+        data = tornado.escape.json_decode(self.request.body)
+        if data.get("name") and data.get("country") and data.get("founded_year"): #.get perché nel caso non ci fosse la chiave restituisce None e non da errore
+            try:
+                data["founded_year"] = int(data["founded_year"])
+            except TypeError:
+                self.set_status(400)
+                self.write({"error": "Richiesta errata"})
+                return
+            await publishers.insert_one({"name": data["name"], "founded_year": data["founded_year"], "country": data["country"]})
+            self.set_status(201)
+            self.write(data)
+        else:
+            self.set_status(400)
+            self.write({"error": "Richiesta incompleta"})
+
+
     def put(self):
         pass
     def delete(self):
