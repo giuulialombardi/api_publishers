@@ -40,7 +40,7 @@ class PublisherHandler(tornado.web.RequestHandler):
         if data.get("name") and data.get("country") and data.get("founded_year"): #.get perché nel caso non ci fosse la chiave restituisce None e non da errore
             try:
                 data["founded_year"] = int(data["founded_year"])
-            except TypeError:
+            except (ValueError, TypeError):
                 self.set_status(400)
                 self.write({"error": "Richiesta errata"})
                 return
@@ -52,7 +52,7 @@ class PublisherHandler(tornado.web.RequestHandler):
             self.write({"error": "Richiesta incompleta"})
 
 
-    async def put(self, id_publisher):
+    async def put(self, id_publisher=None):
         if id_publisher:
             data = tornado.escape.json_decode(self.request.body)
             if data.get("name") and data.get("country") and data.get(
@@ -74,7 +74,7 @@ class PublisherHandler(tornado.web.RequestHandler):
             self.write({"error": "Richiesta incompleta"})
 
 
-    async def delete(self, id_publisher):
+    async def delete(self, id_publisher=None):
         if id_publisher:
             await publishers.delete_one({"_id": ObjectId(id_publisher)})
             #print(ris.deleted_count)
@@ -84,7 +84,8 @@ class PublisherHandler(tornado.web.RequestHandler):
 
 
 class BookHandler(tornado.web.RequestHandler):
-    async def get(self, id_publisher, id_book=None):
+
+    async def get(self, id_publisher=None, id_book=None):
         ris_list=[]
         title = self.get_query_argument("title", default=None)
         author = self.get_query_argument("author", default=None)
@@ -112,29 +113,33 @@ class BookHandler(tornado.web.RequestHandler):
                     return
             if author and not genre:
                 book_cursor = books.find({"author": author, "publisher_id": ObjectId(id_publisher)})
-                if book_cursor:
-                    async for book in book_cursor:
-                        ris_list.append(book)
+                async for book in book_cursor:
+                    ris_list.append(book)
                 else:
                     self.set_status(404)
                     self.write({"error": "Autore non trovato"})
             if genre and not author:
                 book_cursor = books.find({"genre": genre, "publisher_id": ObjectId(id_publisher)})
-                if book_cursor:
-                    async for book in book_cursor:
-                        ris_list.append(book)
+                async for book in book_cursor:
+                    ris_list.append(book)
                 else:
                     self.set_status(404)
                     self.write({"error": "Genere non trovato"})
             if genre and author:
                 book_cursor = books.find({"genre": genre,"author":author, "publisher_id": ObjectId(id_publisher)})
-                if book_cursor:
-                    async for book in book_cursor:
-                        ris_list.append(book)
+                async for book in book_cursor:
+                    ris_list.append(book)
                 else:
                     self.set_status(404)
                     self.write({"error": "Genere non trovato"})
             if len(ris_list)>0:
+                self.set_status(200)
+                self.write(str(ris_list))
+            else:
+                book_cursor = books.find({"publisher_id": ObjectId(id_publisher)})
+                async for book in book_cursor:
+                    ris_list.append(book)
+                    print(ris_list)
                 self.set_status(200)
                 self.write(str(ris_list))
         else:
@@ -142,8 +147,24 @@ class BookHandler(tornado.web.RequestHandler):
             self.write({"error": "Richiesta incompleta"})
 
 
-    def post(self, id_publisher):
-
+    async def post(self, id_publisher=None):
+        if id_publisher:
+            data = tornado.escape.json_decode(self.request.body)
+            if data.get("title") and data.get("author") and data.get("genre") and data.get("year"):
+                try:
+                    data["year"] = int(data["year"])
+                except (ValueError, TypeError):
+                    self.set_status(400)
+                    self.write({"error": "Richiesta errata"})
+                    return
+                await books.insert_one(
+                    {"title": data["title"], "author": data["author"], "genre": data["genre"], "year": data["year"], "publisher_id": ObjectId(id_publisher)})
+                self.set_status(201)
+                self.write(data)
+                return
+        else:
+            self.set_status(400)
+            self.write({"error": "Richiesta incompleta"})
 
 
     def put(self, id_publisher, id_book):
