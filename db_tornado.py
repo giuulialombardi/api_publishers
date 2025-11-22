@@ -127,7 +127,7 @@ class BookHandler(tornado.web.RequestHandler):
                 self.set_status(200)
                 self.write(str(ris_list))
             else:
-                book_cursor = books.find({"publisher_id":id_publisher})
+                book_cursor = books.find({"publisher_id":ObjectId(id_publisher)})
                 async for book in book_cursor:
                     ris_list.append(book)
                     print(ris_list)
