@@ -3,11 +3,6 @@ import asyncio, tornado
 from bson import ObjectId
 from pymongo import AsyncMongoClient
 
-async def diz_id_publishers(pubs):
-    publishers = pubs.find()
-    pub_names_ids = {}
-    async for pub in publishers:
-        pub_names_ids[pub["name"]] = str(pub["_id"])
 
 class PublisherHandler(tornado.web.RequestHandler):
 
@@ -28,9 +23,8 @@ class PublisherHandler(tornado.web.RequestHandler):
                 cursore = publishers.find({"name": name},{"country":country})
             else:
                 ris_list=publishers
-            if cursore:
-                async for pub in cursore:
-                    ris_list.append(pub)
+            async for pub in cursore:
+                ris_list.append(pub)
             self.set_status(200)
             self.write(str(ris_list))
 
@@ -55,8 +49,7 @@ class PublisherHandler(tornado.web.RequestHandler):
     async def put(self, id_publisher=None):
         if id_publisher:
             data = tornado.escape.json_decode(self.request.body)
-            if data.get("name") and data.get("country") and data.get(
-                    "founded_year"):  # .get perché nel caso non ci fosse la chiave restituisce None e non da errore
+            if data.get("name") and data.get("country") and data.get("founded_year"):  # .get perché nel caso non ci fosse la chiave restituisce None e non da errore
                 try:
                     data["founded_year"] = int(data["founded_year"])
                 except TypeError:
@@ -77,6 +70,7 @@ class PublisherHandler(tornado.web.RequestHandler):
     async def delete(self, id_publisher=None):
         if id_publisher:
             await publishers.delete_one({"_id": ObjectId(id_publisher)})
+            self.set_status(204)
             #print(ris.deleted_count)
         else:
             self.set_status(400)
@@ -92,25 +86,21 @@ class BookHandler(tornado.web.RequestHandler):
         genre = self.get_query_argument("genre", default=None)
         if id_publisher:
             if id_book:
-                book = await books.find_one({"_id": ObjectId(id_book), "publisher_id": ObjectId(id_publisher)})
+                book = await books.find_one({"_id": ObjectId(id_book)})
                 if book:
                     self.set_status(200)
                     self.write(str(book))
-                    return
                 else:
                     self.set_status(404)
-                    self.write({"error": "Libro non trovato"})
-                    return
+                    self.write({"error": "Libro non trovato per id"})
             if title:
                 book = await books.find_one({ "title": title, "publisher_id": ObjectId(id_publisher)})
                 if book:
                     self.set_status(200)
                     self.write(str(book))
-                    return
                 else:
                     self.set_status(404)
-                    self.write({"error": "Libro non trovato"})
-                    return
+                    self.write({"error": "Libro non trovato per titolo"})
             if author and not genre:
                 book_cursor = books.find({"author": author, "publisher_id": ObjectId(id_publisher)})
                 async for book in book_cursor:
@@ -125,18 +115,19 @@ class BookHandler(tornado.web.RequestHandler):
                 else:
                     self.set_status(404)
                     self.write({"error": "Genere non trovato"})
+                    return
             if genre and author:
                 book_cursor = books.find({"genre": genre,"author":author, "publisher_id": ObjectId(id_publisher)})
                 async for book in book_cursor:
                     ris_list.append(book)
                 else:
                     self.set_status(404)
-                    self.write({"error": "Genere non trovato"})
+                    self.write({"error": "Genere  e autore non trovato"})
             if len(ris_list)>0:
                 self.set_status(200)
                 self.write(str(ris_list))
             else:
-                book_cursor = books.find({"publisher_id": ObjectId(id_publisher)})
+                book_cursor = books.find({"publisher_id":id_publisher})
                 async for book in book_cursor:
                     ris_list.append(book)
                     print(ris_list)
@@ -173,7 +164,7 @@ class BookHandler(tornado.web.RequestHandler):
                 if data.get("title") and data.get("author") and data.get("genre") and data.get("year"): # .get perché nel caso non ci fosse la chiave restituisce None e non da errore
                     try:
                         data["year"] = int(data["year"])
-                    except TypeError:
+                    except (ValueError, TypeError):
                         self.set_status(400)
                         self.write({"error": "Richiesta errata"})
                         return
@@ -195,6 +186,7 @@ class BookHandler(tornado.web.RequestHandler):
         if id_publisher:
             if id_book:
                 await books.delete_one({"_id": ObjectId(id_book)})
+                self.set_status(204)
                 # print(ris.deleted_count)
             else:
                 self.set_status(400)
