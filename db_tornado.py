@@ -52,7 +52,7 @@ class PublisherHandler(tornado.web.RequestHandler):
             if data.get("name") and data.get("country") and data.get("founded_year"):  # .get perché nel caso non ci fosse la chiave restituisce None e non da errore
                 try:
                     data["founded_year"] = int(data["founded_year"])
-                except TypeError:
+                except (ValueError, TypeError):
                     self.set_status(400)
                     self.write({"error": "Richiesta errata"})
                     return
