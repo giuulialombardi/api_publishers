@@ -148,7 +148,7 @@ async def aggiungi_publishers(pubs, books):
     publishers=pubs.find()
     pub_names_ids={}
     async for pub in publishers:
-        pub_names_ids[pub["name"]]=str(pub["_id"])
+        pub_names_ids[pub["name"]]=(pub["_id"])
     #print(pub_names_ids)
     await books.insert_many([
   {
